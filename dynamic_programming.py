@@ -8,8 +8,8 @@ solution is based off of the pseudocode given in "Algorithm Design" by Eva Tardo
 
 '''
 
-#Bottom up solution: Find the optimal solution for the first interval and work
-#all the way up to the end.
+#Bottom up solution: This finds the optimal solution starting with just the 
+#first interval and continues on to the next element until it reaches the end.
 
 def bottom_up(j):
     M = [None]*(len(lyst) + 1)
