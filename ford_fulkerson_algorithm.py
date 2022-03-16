@@ -26,13 +26,13 @@ number_injured = 100
 total_hospitals = 5
 
 for i in range(0, number_injured):    #create a list of the locations of injured people and hospitals
-    injured.append((random.randint(0, 50), random.randint(0, 50))) #each unit represents one unit of travel
+    injured.append((random.randint(0, 50), random.randint(0, 50))) #each unit represents one minute of travel
 
 for i in range(0, total_hospitals):
     hospitals.append((random.randint(0, 50), random.randint(0, 50)))
 
 
-dyct = {}    #this will denote all of the vertices conneting each node
+dyct = {}    #this will denote all of the edges conneting nodes
 maxx = math.ceil(len(injured) / len(hospitals))
 
 for k in hospitals:
