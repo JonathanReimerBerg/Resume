@@ -1,0 +1,53 @@
+---
+title: "Final"
+author: "Jonathan Reimer-Berg"
+date: '2022-04-30'
+output: pdf_document
+---
+
+```{r}
+library(ggplot2)
+library(socviz)
+library(ggthemes)
+library(maps)
+library(tidyverse)
+library(dplyr)
+```
+
+```{r}
+data <- read.csv("final_bird_data.csv")
+USData <- read.csv("USData.csv")
+```
+
+```{r}
+data <- distinct(data, name,state, .keep_all= TRUE)
+
+bird_data <- data %>%
+    group_by(state) %>%
+    summarize(total = n()) 
+
+USData$region <- str_to_title(USData$region)
+USData$state <- state.abb[match(USData$region, state.name)]
+
+final_data <- left_join(USData, bird_data)
+```
+
+```{r}
+p0 <- ggplot(data = final_data,
+             aes(x = long, y = lat, group = group, fill = total))
+
+p1 <- p0 + geom_polygon(color = "white", size = 0.25) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45) 
+
+p2 <- p1 + scale_fill_gradientn(colours = c("#ffe657", "tomato", "#ff033e"), na.value = "grey90") +
+  labs(title = "Number of birds seen in each state")
+                                
+p2 + theme_map() + labs(fill = "Total Birds")
+```
+
+The above map is a recreation of the My eBird map that is visible for each eBird user summerizing the number
+of species seen in each location (there's is clickable, showing data by country, state, and county). All of the colors
+and data is therefore a replication of that map, with the data used to create it gotten from eBird. The main stories here are
+the two places I have spend the most time, Oregon and Virignia, with several other states also being darker that are good 
+for birds (Florida and Colorado). Python was necessary for formatting the data for easy use in r. 
+
