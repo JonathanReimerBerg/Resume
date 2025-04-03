@@ -1,7 +1,7 @@
 # Jonathan Reimer-Berg
 
 '''
-Interal Scheduling Problem: Given a list of start times, end times, and weights,
+Interval Scheduling Problem: Given a list of start times, end times, and weights,
 our goal is to find the maximum total weight with none of the time intervals
 overlaping and retrieve the solution that gives that weight. The following
 solution is based off of the pseudocode given in "Algorithm Design" by Eva Tardos. 
