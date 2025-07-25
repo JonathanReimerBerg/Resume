@@ -5,20 +5,21 @@
 import csv
 import sqlite3
 import re
+from datetime import date
 
 def runCommand(command, fetchone = False, fetchall = False):
     connection = sqlite3.connect("PolkDatabase.db")
     crsr = connection.cursor()
     try:
         crsr.execute(command)
-    except:         
-        print(command)      #print the command if it doesn't work, usually a formatting issue
+    except:
+        print(command)    #print the command if it doesn't work, usually a formatting issue when writing code
+    result = crsr.fetchall()
     connection.commit()
     connection.close
+    return(result)
 
-runCommand("DROP TABLE IF exists CHECKLISTS;")
-
-command = """CREATE TABLE CHECKLISTS ( 
+command = """CREATE TABLE IF NOT EXISTS CHECKLISTS ( 
     ID varchar(64),
     Hotspot varchar(64),
     Time varchar(16),
@@ -31,40 +32,66 @@ command = """CREATE TABLE CHECKLISTS (
     );"""
 
 runCommand(command)   #create a table to store each checklists using its given ebird identifier
+
+command = """CREATE TABLE IF NOT EXISTS LAST_UPDATED (
+    Year INTEGER, 
+    Month INTEGER, 
+    Day INTEGER
+    );"""
+runCommand(command)
+
+command = """INSERT INTO LAST_UPDATED (Year, Month, Day)
+SELECT 1899, 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM LAST_UPDATED);"""
+runCommand(command)   #if there are no values in table set default last update to Jan 1, 1899, just before the defualt life list entry for ebird
+
+lastUpdated = runCommand("SELECT Year, Month, Day from LAST_UPDATED;")[0]
+lastUpdated = date(lastUpdated[0], lastUpdated[1], lastUpdated[2])
+print('Last Updated: ' + str(lastUpdated))
+nowUpdated = lastUpdated
+
 birds = []  # a table for each species, using list to check dups
 lists = []  #checklists can show up multiple times in the data, so we should check dups
 
 with open('MyEBirdData.csv', 'r', encoding='utf') as file:
     reader = csv.reader(file)
     for row in reader:
-        if row[6] == 'Polk':    #database only being set up for Polk Co.
-            if row[0] not in lists:   #check if we arleady entered the checklist in 'checklists' table
-                values = '"'+row[0]+'","'+row[8]+'","'+row[12]+'''
-                    ",'''+row[11][5:7]+','+row[11][8:10]+','+row[11][0:4]+','+row[18] 
-                command = '''INSERT INTO CHECKLISTS (ID, Hotspot, Time, Month, Day, Year, Observers)
-                    VALUES (''' + values + ''');'''
-                runCommand(command)
-                lists.append(row[0])
+        if (row[6] == 'Polk'):    #database only being set up for Polk Co.
+            ld = row[11].split('-')   
+            ld = date(int(ld[0]), int(ld[1]), int(ld[2]))
+            if ld > lastUpdated:    #we only want to add new lists to the db
+                if ld > nowUpdated:
+                    nowUpdated = ld
+                if row[0] not in lists:   #check if we arleady entered the checklist in 'checklists' table
+                    values = '"'+row[0]+'","'+row[8]+'","'+row[12]+'''
+                        ",'''+row[11][5:7]+','+row[11][8:10]+','+row[11][0:4]+','+row[18] 
+                    command = '''INSERT INTO CHECKLISTS (ID, Hotspot, Time, Month, Day, Year, Observers)
+                        VALUES (''' + values + ''');'''
+                    runCommand(command)
+                    lists.append(row[0])
 
-            if '(' in row[1]:      #basically removes sub-taxa
-                row[1] = re.sub(r"\((.*?)\)", "", row[1])[:-1]
-            
-            if row[1] not in birds:  #if we don't have a table for that bird yet
-                command = ("CREATE TABLE if not exists '" + str(row[1].replace("'","''")) + "'" + '''(
-                    Checklist varchar(10),
-                    Count INTEGER varchar(5));''')
-                runCommand(command)
-                birds.append(row[1])
-                print(row[1], ' added')
+                if '(' in row[1]:      #basically removes sub-taxa
+                    row[1] = re.sub(r"\((.*?)\)", "", row[1])[:-1]
+                
+                if (row[1] not in birds) and runCommand("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name= '" + str(row[1].replace("'","''")) + "';")[0][0] == 0:  #if we don't have a table for that bird yet
+                    command = ("CREATE TABLE if not exists '" + str(row[1].replace("'","''")) + "'" + '''(
+                        Checklist varchar(10),
+                        Count INTEGER varchar(5));''')
+                    runCommand(command)
+                    birds.append(row[1])
+                    print(row[1], ' added')
 
-            if row[4] == 'X':   #integers only, defaulting to 1 bird seen
-                row[4] = str(1)
+                if row[4] == 'X':   #integers only, defaulting to 1 bird seen
+                    row[4] = str(1)
 
-            command = ("INSERT INTO '" + str(row[1].replace("'","''")) + "'(Checklist, Count) VALUES" + '''
-                ("''' + str(row[0]) + '", ' + row[4] + ');')
-            runCommand(command)   #adds the report to the species table
-            
-    print('done')
+                command = ("INSERT INTO '" + str(row[1].replace("'","''")) + "'(Checklist, Count) VALUES" + '''
+                    ("''' + str(row[0]) + '", ' + row[4] + ');')
+                runCommand(command)   #adds the report to the species table
+
+
+runCommand("UPDATE LAST_UPDATED set Year = " + str(nowUpdated.year) + ", Month = " + str(nowUpdated.month) + ", Day = " + str(nowUpdated.day) + ";")
+
+print('done, now updated as of ' + str(nowUpdated))
             
 
 #The following code fragment can create a table for each checklist, which is much less efficient

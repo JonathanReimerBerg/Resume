@@ -32,7 +32,8 @@ def main():
             hotspots = pm.hotspotList()
             print(hotspots)
             hotspot = inputLoc(hotspots)
-            sm.hotspotList(birdlist, hotspot)     
+            if hotspot:
+                sm.hotspotList(birdlist, hotspot)     
         elif inp == 'q':
             break
 
