@@ -1,5 +1,7 @@
-import sql_methods as sm
-import panda_methods as pm
+import ProjectFiles.sql_methods as sm
+import ProjectFiles.panda_methods as pm
+import ProjectFiles.DB_writer as dw
+import os.path
 
 
 def inputLoc(hotspots):  #attempts to autofill a given location
@@ -13,27 +15,41 @@ def inputLoc(hotspots):  #attempts to autofill a given location
         spot = inputLoc(hotspots)  #recursive function, above line insures no return if loc not found, needs to be before function call
     return(spot)
 
+def addLoc(Loc = None):
+    dw.initializeDB()
+    pm.cleanCSV()
+    return
 
 def main():
+    if not os.path.isfile('ProjectFiles/DBs/PolkDatabase.db'):
+        addLoc()
     while True:   #option menu, trying to keep simple functionality
-        inp = input('''p: print life list \ns: species summary \ny: print year list \nh: hotspot list \nq: quit \n''')
-        if inp == 'p':
+        inp = input('''\nu: update data \np: print life list \ns: species summary \ny: print year list \nh: hotspot list \nc: high counts \nq: quit \n''')
+        if inp == 'u':
+            dw.updateDB()
+        elif inp == 'p':
            pm.lifelist(True)
         elif inp == 's':
             species = input("Species: ")
-            sm.speciesData(species)
-            pm.scatterplot(species)
+            if species in pm.lifelist():
+                sm.speciesData(species)
+                pm.scatterplot(species)
+            else:
+                print('\n', species, 'not found')
         elif inp == 'y':
             year = input("Enter a year: ")
             seen = input("Would you like to see first seen (f) or last (l): ")
             pm.yearlist(year, seen == 'l')
         elif inp == 'h':
-            birdlist = pm.lifelist() #could add this stuff to inputLoc but it is also used again later
             hotspots = pm.hotspotList()
-            print(hotspots)
+            for i in hotspots:
+                print(i)
             hotspot = inputLoc(hotspots)
             if hotspot:
-                sm.hotspotList(birdlist, hotspot)     
+                sm.hotspotList(pm.lifelist(), hotspot) 
+        elif inp == 'c':
+            year = input("Enter a year: ")
+            sm.highCounts(pm.lifelist(), year)
         elif inp == 'q':
             break
 
