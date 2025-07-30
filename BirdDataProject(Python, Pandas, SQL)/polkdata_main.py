@@ -1,7 +1,7 @@
 import ProjectFiles.sql_methods as sm
 import ProjectFiles.panda_methods as pm
 import ProjectFiles.DB_writer as dw
-import os.path
+import os
 
 
 def inputLoc(hotspots):  #attempts to autofill a given location
@@ -15,14 +15,16 @@ def inputLoc(hotspots):  #attempts to autofill a given location
         spot = inputLoc(hotspots)  #recursive function, above line insures no return if loc not found, needs to be before function call
     return(spot)
 
-def addLoc(Loc = None):
+def setup(Loc = None):
+    os.mkdir('ProjectFiles/DBs')
+    os.mkdir('ProjectFiles/CSVs')
     dw.initializeDB()
     pm.cleanCSV()
     return
 
 def main():
     if not os.path.isfile('ProjectFiles/DBs/PolkDatabase.db'):
-        addLoc()
+        setup()
     while True:   #option menu, trying to keep simple functionality
         inp = input('''\nu: update data \np: print life list \ns: species summary \ny: print year list \nh: hotspot list \nc: high counts \nq: quit \n''')
         if inp == 'u':
