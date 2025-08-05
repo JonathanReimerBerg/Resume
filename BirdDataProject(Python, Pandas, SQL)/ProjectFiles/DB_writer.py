@@ -7,8 +7,8 @@ import sqlite3
 import re
 from datetime import date
 
-def runCommand(command, fetchone = False, fetchall = False):
-    connection = sqlite3.connect("ProjectFiles/DBs/PolkDatabase.db")
+def runCommand(command, loc, fetchone = False, fetchall = False):
+    connection = sqlite3.connect("ProjectFiles/DBs/" + loc + "Database.db")
     crsr = connection.cursor()
     try:
         crsr.execute(command)
@@ -19,7 +19,7 @@ def runCommand(command, fetchone = False, fetchall = False):
     connection.close
     return(result)
 
-def initializeDB():
+def initializeDB(loc):
     command = """CREATE TABLE IF NOT EXISTS CHECKLISTS ( 
         ID varchar(64),
         Hotspot varchar(64),
@@ -32,35 +32,35 @@ def initializeDB():
         CONSTRAINT CHECKLISTS_PK
         );"""
 
-    runCommand(command)   #create a table to store each checklists using its given ebird identifier
+    runCommand(command, loc)   #create a table to store each checklists using its given ebird identifier
 
     command = """CREATE TABLE IF NOT EXISTS LAST_UPDATED (
         Year INTEGER, 
         Month INTEGER, 
         Day INTEGER
         );"""
-    runCommand(command)
+    runCommand(command, loc)
 
     command = """INSERT INTO LAST_UPDATED (Year, Month, Day)
     SELECT 1899, 1, 1
     WHERE NOT EXISTS (SELECT 1 FROM LAST_UPDATED);"""
-    runCommand(command)   #if there are no values in table set default last update to Jan 1, 1899, just before the defualt life list entry for ebird
+    runCommand(command, loc)   #if there are no values in table set default last update to Jan 1, 1899, just before the defualt life list entry for ebird
 
 
-def updateDB():
-    lastUpdated = runCommand("SELECT Year, Month, Day from LAST_UPDATED;")[0]
+def updateDB(loc):
+    lastUpdated = runCommand("SELECT Year, Month, Day from LAST_UPDATED;", loc)[0]
     lastUpdated = date(lastUpdated[0], lastUpdated[1], lastUpdated[2])
-    print('Last Updated: ' + str(lastUpdated))
+    print('\n' + loc,'last updated: ' + str(lastUpdated))
     nowUpdated = lastUpdated
 
-    birds = runCommand("SELECT name FROM sqlite_master where type='table';")  # a table for each species, using list to check dups
+    birds = runCommand("SELECT name FROM sqlite_master where type='table';", loc)  # a table for each species, using list to check dups
     birds = [item[0] for item in birds]
     lists = []  #checklists can show up multiple times in the data, so we should check dups
 
     with open('ProjectFiles/MyEBirdData.csv', 'r', encoding='utf') as file:
         reader = csv.reader(file)
         for row in reader:
-            if (row[6] == 'Polk'):    #database only being set up for Polk Co.
+            if ((row[6] == loc) or (loc == 'Oregon')) and (row[5] == 'US-OR'):    #database only being set up for Oregon
                 ld = row[11].split('-')   #ld stands for list date, so we can update the nowUpdated to the latest checklist date added
                 ld = date(int(ld[0]), int(ld[1]), int(ld[2]))
                 if ld > lastUpdated:    #we only want to add new lists to the db
@@ -71,7 +71,7 @@ def updateDB():
                             ",'''+row[11][5:7]+','+row[11][8:10]+','+row[11][0:4]+','+row[18] 
                         command = '''INSERT INTO CHECKLISTS (ID, Hotspot, Time, Month, Day, Year, Observers)
                             VALUES (''' + values + ''');'''
-                        runCommand(command)
+                        runCommand(command, loc)
                         lists.append(row[0])
 
                     if '(' in row[1]:      #basically removes sub-taxa
@@ -82,7 +82,7 @@ def updateDB():
                             Checklist varchar(10),
                             Count INTEGER varchar(5),
                             Year varchar(4));''')
-                        runCommand(command)
+                        runCommand(command, loc)
                         birds.append(row[1])
                         print(row[1], ' added')
 
@@ -91,12 +91,12 @@ def updateDB():
 
                     command = ("INSERT INTO '" + str(row[1].replace("'","''")) + "'(Checklist, Count, Year) VALUES" + '''
                         ("''' + str(row[0]) + '", ' + row[4] + ', "' + str(row[11][0:4]) + '");')
-                    runCommand(command)   #adds the report to the species table
+                    runCommand(command, loc)   #adds the report to the species table
 
 
-    runCommand("UPDATE LAST_UPDATED set Year = " + str(nowUpdated.year) + ", Month = " + str(nowUpdated.month) + ", Day = " + str(nowUpdated.day) + ";")
+    runCommand("UPDATE LAST_UPDATED set Year = " + str(nowUpdated.year) + ", Month = " + str(nowUpdated.month) + ", Day = " + str(nowUpdated.day) + ";", loc)
 
-    print('done, now updated as of ' + str(nowUpdated))
+    print(loc, 'data done, now updated as of ' + str(nowUpdated), '\n')
             
 
 #The following code fragment can create a table for each checklist, which is much less efficient

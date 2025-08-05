@@ -4,16 +4,18 @@ import matplotlib.dates as mdates
 import datetime
 
 
-def cleanCSV():       #mostly just removing columns we don't need, and then writing to new CSV file 
+def cleanCSV(loc):       #mostly just removing columns we don't need, and then writing to new CSV file 
     data = pandas.read_csv('ProjectFiles/MyEBirdData.csv')
     data.drop(columns = ['Scientific Name', 'Taxonomic Order', 'Distance Traveled (km)', 'Area Covered (ha)',
                      'Breeding Code', 'Observation Details', 'Checklist Comments', 'ML Catalog Numbers',
                      'Location ID', 'Latitude', 'Longitude', 'Time', 'Protocol', 'Duration (Min)',
                      'All Obs Reported', 'Number of Observers'], inplace = True)
-    data.drop(data[data.County != 'Polk'].index, inplace = True)
+    data.drop(data[data['State/Province'] != 'US-OR'].index, inplace = True)
+    if loc != "Oregon":
+        data.drop(data[data.County != loc].index, inplace = True)
     data.reset_index(drop = True, inplace = True)
     data.columns = [c.replace(' ', '_') for c in data.columns]
-    data.to_csv('ProjectFiles/CSVs/CleanedData.csv', encoding = 'utf-8', index = False)
+    data.to_csv('ProjectFiles/CSVs/' + loc + 'CleanedData.csv', encoding = 'utf-8', index = False)
     return(data)
 
 def removeOtherTaxa(data):  #remove all non countable taxa, coultn't get all of these in one line
@@ -24,14 +26,14 @@ def removeOtherTaxa(data):  #remove all non countable taxa, coultn't get all of 
     data['Common_Name'] = data['Common_Name'].str.replace(r'\s+\([^()]*\)$', '', regex=True) #remove stuff in parenthesis
     return(data)
 
-def hotspotList():  #will return the name of each location birds have been reported from
-    data = pandas.read_csv('ProjectFiles/CSVs/CleanedData.csv')
+def hotspotList(loc):  #will return the name of each location birds have been reported from
+    data = pandas.read_csv('ProjectFiles/CSVs/' + loc + 'CleanedData.csv')
     hotspots = data['Location'].unique()
     hotspots.sort()
     return(hotspots)
 
-def lifelist(printed = False):  #create a list of all birds seen in Polk, can print
-    data = pandas.read_csv('ProjectFiles/CSVs/CleanedData.csv')     
+def lifelist(loc, printed = False):  #create a list of all birds seen in Polk, can print
+    data = pandas.read_csv('ProjectFiles/CSVs/' + loc + 'CleanedData.csv')     
     data = removeOtherTaxa(data)
     birdlist = data['Common_Name'].unique()  #we are left with one of each species in list form
     if printed:
@@ -40,8 +42,8 @@ def lifelist(printed = False):  #create a list of all birds seen in Polk, can pr
         print('\n', len(birdlist), '\n')
     return(birdlist)
 
-def scatterplot(species): #create a scatterplot of all the reports of a species by time of year and count
-    data = pandas.read_csv('ProjectFiles/CSVs/CleanedData.csv')
+def scatterplot(species, loc): #create a scatterplot of all the reports of a species by time of year and count
+    data = pandas.read_csv('ProjectFiles/CSVs/' + loc + 'CleanedData.csv')
     data.drop(data[data.Common_Name != species].index, inplace = True)  #remove everything but the target sp.
 
     data['Date'] = pandas.to_datetime(data['Date'])           
@@ -64,13 +66,13 @@ def scatterplot(species): #create a scatterplot of all the reports of a species 
     plt.ylim([0, data['Count'].max()*1.15])    #make a top margin
     plt.xlabel("Date")
     plt.ylabel("Count")
-    plt.title(str(species) + ' in Polk county')
+    plt.title(str(species) + ' in ' + loc)
 
     plt.show()
 
 
-def yearlist(year, last = False):   #print a list of species for a given year, can sort by first seen or last
-    data = pandas.read_csv('ProjectFiles/CSVs/CleanedData.csv')
+def yearlist(year, loc, last = False):   #print a list of species for a given year, can sort by first seen or last
+    data = pandas.read_csv('ProjectFiles/CSVs/' + loc + 'CleanedData.csv')
     data = removeOtherTaxa(data)
     data = data[data.Date.str.contains(str(year))]  #include only species in given year
 
